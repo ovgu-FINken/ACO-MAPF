@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from typing import List
 
+
 class NavigationAgent:
 
     def __init__(self, start: int = 0, goal: int = 1, state: int = None) -> object:
@@ -11,6 +12,9 @@ class NavigationAgent:
             self.state = start
         else:
             self.state = state
+
+    def step(self):
+        pass
 
     def register_world(self, world):
         """
@@ -35,16 +39,26 @@ class GraphWorld:
         for agent in self.agents:
             agent.register_world(self)
 
+    def update_agents(self, agents: NavigationAgent):
+        """
+
+        :type agents: NavigationAgent
+        """
+        self.agents = agents
+        for agent in self.agents:
+            agent.register_world(self)
+
     def draw_adjacency(self):
         return nx.draw(self.graph, self.graph_pos)
 
-    def get_neighbours(self, state:int) -> List[int]:
+    def get_neighbours(self, state: int, exclude: List[int] = []) -> List[int]:
+        if state is None:
+            raise ValueError
         neighbours = []
         for i in range(self.nodes):
-            if self.adjacency[state, i] > 0:
+            if self.adjacency[state, i] > 0 and i not in exclude:
                 neighbours.append(i)
         return neighbours
-
 
     @property
     def nodes(self):
@@ -54,6 +68,9 @@ class GraphWorld:
     def egdes(self):
         return len(self.graph.edges)
 
+    def step(self):
+        for agent in self.agents:
+            agent.step()
 
 class TestProblem:
     def __init__(self, seed=None):
@@ -65,16 +82,16 @@ class TestProblem:
     def watts_strogatz_problem(self, nodes, k, p, start=0, goal=1, **kwargs):
         G = nx.watts_strogatz_graph(nodes, k, p, **kwargs)
         for e in G.edges():
-            G[e[0]][e[1]]['weight']= 0.5 + self.random.rand()
+            G[e[0]][e[1]]['weight'] = 0.5 + self.random.rand()
 
         return self.graph_prolem(G, start=start, goal=goal, **kwargs)
 
     def hard_1(self):
-        return self.watts_strogatz_problem(145,4, 0.01, seed=42, start=0, goal=75)
-        G = nx.watts_strogatz_graph(145,4, 0.01, seed=42)
+        return self.watts_strogatz_problem(145, 4, 0.01, seed=42, start=0, goal=75)
+        G = nx.watts_strogatz_graph(145, 4, 0.01, seed=42)
 
     def hard_2(self):
-        return self.watts_strogatz_problem(42,4,0.05, seed=23, goal=27)
+        return self.watts_strogatz_problem(42, 4, 0.05, seed=23, goal=27)
 
     def easy_1(self):
         G = nx.Graph()
@@ -90,7 +107,7 @@ class TestProblem:
         G.add_edge(7, 8, weight=1)
         self.graph_prolem(G, goal=8)
 
-#G.add_edge(5, 9)
+    # G.add_edge(5, 9)
 
     def easy_2(self):
         G = nx.Graph()
@@ -119,8 +136,7 @@ class TestProblem:
         G.add_edge(6, 8, weight=1.0)
         return self.graph_prolem(G, goal=7)
 
+
 if __name__ == "__main__":
     world = TestProblem().hard_1()
     print(f"nodes: {world.nodes}, edges: {world.egdes}")
-
-

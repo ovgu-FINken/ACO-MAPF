@@ -1,5 +1,6 @@
 from src.aco_mapf.GraphWorld import *
 
+
 def fitness_proportional_selection(probs, random=np.random.rand()):
     s = sum(probs.values())
     pick = random * s
@@ -11,61 +12,132 @@ def fitness_proportional_selection(probs, random=np.random.rand()):
     print("selection could not pick an item - should not happen!")
     return probs[-1]
 
+
 def normalize_matrix(m: np.matrix):
-    normalized = m / np.sum(m)
+    return m / np.sum(m)
+
+
+class Colony:
+    pheromones: np.matrix
+
+    def __init__(self, pheromones=None):
+        self.pheromones = pheromones
+        self.ants = []
+
+    def add_ant(self, ant):
+        self.ants.append(ant)
+
+    def __len__(self):
+        return len(self.ants)
+
 
 class AcoAgent(NavigationAgent):
     pheromones: np.matrix
     data: list
     random: np.random.RandomState
 
-    def __init__(self, seed=None, **kwargs):
+    def __init__(self, seed=None, colony=None, **kwargs):
         NavigationAgent.__init__(self, **kwargs)
         self.data = []
         self.path = [self.state]
         self.random = np.random.RandomState(seed=seed)
         self.forward = True
+        self.colony = colony if colony is not None else Colony(ant=self)
+        self.colony.add_ant(self)
+        self.stuck = False
+
+    def register_world(self, world):
+        NavigationAgent.register_world(self, world)
+        self.initialize_pheromones()
 
     def initialize_pheromones(self):
-        self.pheromones = np.ones_like(self.world.adjacency)
+        if self.colony.pheromones is None:
+            self.colony.pheromones = np.ones_like(self.world.adjacency)
+        else:
+            assert self.colony.pheromones.shape == self.world.adjacency.shape
 
-
-    def transition_value(self, i, j, forward=True, alpha: float = 1.0, **kwargs):
+    def transition_value(self, i, j, forward=True, alpha: float = 1.0, beta: float = 1.0, **_):
         """
 
         :type alpha: float
+        :type beta: float
         """
         if not forward:
             i, j = j, i
-        return self.pheromones[i, j]**alpha
+        return self.colony.pheromones[i, j] ** alpha + (1 / self.world.adjacency[i, j]) ** beta
 
     def decision(self, **kwargs) -> int:
         """
 
         :param kwargs:
         :type alpha: float
+        :type beta: float
         :return: decision for next state
         """
-        new = self.world.get_neighbours(self.state)
-        new = [next for next in new if next not in self.path]
-        probs = {k: self.value(self.state, k, **kwargs) for k in new}
+        new = self.world.get_neighbours(self.state, exclude=self.path)
+        if not new:
+            self.stuck = True
+            return None
+        probs = {k: self.transition_value(self.state, k, **kwargs) for k in new}
         return fitness_proportional_selection(probs, random=self.random.rand())
 
-    def delayed_pheromone_update(self):
-        pass
+    def path_distance(self, path) -> float:
+        d: float = 0.0
+        for i, j in zip(path[:-1], path[1:]):
+            d += self.world.adjacency[i, j]
+        return d
+
+    def put_pheromones(self, c_t=1.0, c_d=1.0):
+        path = self.path
+        if not self.forward:
+            path.reverse()
+
+        amount = c_t * len(path) + c_d * self.path_distance(path)
+        for i, j in zip(path[:-1], path[1:]):
+            self.colony.pheromones[i, j] += amount
+
+    def delayed_pheromone_update(self, **kwargs) -> None:
+        if self.arrived:
+            self.put_pheromones(**kwargs)
 
     def vaporize(self):
-        self.pheromones = normalize_matrix(self.pheromones)
+        self.colony.pheromones = normalize_matrix(self.colony.pheromones)
 
-    def pheromone_update(self):
-        self.delayed_phermone_update()
+    def pheromone_update(self, **kwargs):
+        self.delayed_pheromone_update(**kwargs)
         self.vaporize()
 
-    def daemon_actions(self):
-        pass
+    @property
+    def arrived(self) -> bool:
+        if self.forward and self.state == self.goal:
+            return True
+        elif not self.forward and self.state == self.start:
+            return True
+        return False
+
+    def reset(self, reverse_ant_on_reset=True, **_):
+        if reverse_ant_on_reset and not self.stuck:
+            self.forward = not self.forward
+        self.state = self.start if self.forward else self.goal
+        self.path = [self.state]
+        self.stuck = False
+
+    def daemon_actions(self, **kwargs):
+        if self.arrived or self.stuck:
+            self.reset(**kwargs)
 
     def step(self):
         self.state = self.decision()
+        self.path.append(self.state)
         self.pheromone_update()
         self.daemon_actions()
 
+
+if __name__ == '__main__':
+    world = TestProblem().easd_4()
+    colony = Colony()
+    agents = [AcoAgent(colony=colony, start=world.agents[0].start, goal=world.agents[0].goal) for _ in range(10)]
+    world.update_agents(agents)
+    for _ in range(100):
+        world.step()
+    print(f"{colony.pheromones}")

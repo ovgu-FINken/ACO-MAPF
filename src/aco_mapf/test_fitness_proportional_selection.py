@@ -11,11 +11,12 @@ class TestFitness_proportional_selection(unittest.TestCase):
             self.assertEqual(fitness_proportional_selection(probs), 'always')
 
     def test_different_probs(self):
-        probs = {'first':0.1, 'second': 0.5, 'third': 0.4}
+        probs = {'first': 0.1, 'second': 0.5, 'third': 0.4}
         self.assertEqual(fitness_proportional_selection(probs, 0.05), 'first')
         self.assertEqual(fitness_proportional_selection(probs, 0.15), 'second')
         self.assertEqual(fitness_proportional_selection(probs, 0.55), 'second')
         self.assertEqual(fitness_proportional_selection(probs, 0.99), 'third')
+
 
 if __name__ == '__main__':
     unittest.main()
