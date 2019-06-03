@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 from typing import List
-
+import matplotlib.pyplot as plt
 
 class NavigationAgent:
 
@@ -49,7 +49,8 @@ class GraphWorld:
             agent.register_world(self)
 
     def draw_adjacency(self):
-        return nx.draw(self.graph, self.graph_pos)
+        return nx.draw(self.graph, self.graph_pos, labels={k : str(k) for k in self.graph.nodes()} )
+
 
     def get_neighbours(self, state: int, exclude: List[int] = []) -> List[int]:
         if state is None:
@@ -124,7 +125,7 @@ class TestProblem:
         G.add_edge(2, 3, weight=1.0)
         return self.graph_prolem(G, goal=3)
 
-    def easd_4(self):
+    def easy_4(self):
         G = nx.Graph()
         G.add_edge(1, 2, weight=1.0)
         G.add_edge(2, 3, weight=1.0)
@@ -140,3 +141,6 @@ class TestProblem:
 if __name__ == "__main__":
     world = TestProblem().hard_1()
     print(f"nodes: {world.nodes}, edges: {world.egdes}")
+    plt.figure()
+    world.draw_adjacency()
+    plt.show()

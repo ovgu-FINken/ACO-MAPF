@@ -134,7 +134,7 @@ class AcoAgent(NavigationAgent):
 
 
 if __name__ == '__main__':
-    world = TestProblem().easd_4()
+    world = TestProblem().easy_4()
     colony = Colony()
     agents = [AcoAgent(colony=colony, start=world.agents[0].start, goal=world.agents[0].goal) for _ in range(10)]
     world.update_agents(agents)
