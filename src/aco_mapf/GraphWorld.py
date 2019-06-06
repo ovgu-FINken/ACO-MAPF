@@ -3,10 +3,13 @@ import numpy as np
 from typing import List
 import matplotlib.pyplot as plt
 import pandas as pd
+import graphviz
+import tempfile
 
-class NavigationAgent:
 
-    def __init__(self, start: int = 0, goal: int = 1, state: int = None, id=0) -> object:
+class NavigationAgent(object):
+
+    def __init__(self, start: int = 0, goal: int = 1, state: int = None):
         self.start = start
         self.goal = goal
         if state is None:
@@ -22,7 +25,6 @@ class NavigationAgent:
         register the world to the agent
         :type world: GraphWorld
         """
-        assert isinstance(world, GraphWorld)
         self.world = world
 
 
@@ -54,6 +56,35 @@ class GraphWorld:
     def draw_adjacency(self):
         return nx.draw(self.graph, self.graph_pos, labels={k : str(k) for k in self.graph.nodes()} )
 
+    def draw_pheromones(self,
+                        pheromone_matrix: np.matrix,
+                        cutoff: float = 0.01,
+                        thickness: float = 1.0,
+                        node_size: float = 1.0,
+                        node_label: bool = False,
+                        label: bool = True
+                        ):
+        matrix = pheromone_matrix.copy()
+        for i, j in np.ndindex(matrix.shape):
+            if matrix[i, j] < cutoff:
+                matrix[i, j] = 0
+        G = nx.from_numpy_matrix(matrix, create_using=nx.DiGraph())
+        weight = nx.get_edge_attributes(G, 'weight')
+        node_colors = ["lightblue" for _ in range(matrix.shape[0])]
+        labels = {k: f"{v:.2f}" for k, v in weight.items()}
+        if node_label:
+            node_labels = None
+            if label:
+                node_labels = {k: f"{np.diag(matrix)[k]:.2f}" for k in range(matrix.shape[0])}
+            nx.draw_networkx_labels(G, pos=self.graph_pos, labels=node_labels)
+
+        if label:
+            nx.draw_networkx_edge_labels(G, self.graph_pos, edge_labels=labels, label_pos=0.3)
+        width = [(w['weight']) * thickness / np.max(matrix) for u, v, w in G.edges(data=True)]
+        nx.draw_networkx_nodes(G, pos=self.graph_pos, node_color=node_colors,
+                               node_size=[node_size * 300 * (1 + v) for v in np.diag(matrix)])
+        nx.draw_networkx_edges(G, self.graph_pos, width=width, alpha=0.3, connectionstyle='arc3,rad=0.2', arrowstyle="-|>",
+                               arraowsize=thickness * 3)
 
     def get_neighbours(self, state: int, exclude: List[int] = []) -> List[int]:
         if state is None:
@@ -63,6 +94,53 @@ class GraphWorld:
             if self.adjacency[state, i] > 0 and i not in exclude:
                 neighbours.append(i)
         return neighbours
+
+    def dot_graph(self, pheromones: np.matrix = None, eps: float = 0.01, render=False):
+        dot = graphviz.Digraph(comment="representation of current world state", engine="neato")
+        dot.attr(overlap="scale")
+        dot.attr(K="1")
+        dot.attr(maxiter="20000")
+        dot.attr(start="42")
+        for i in range(self.adjacency.shape[0]):
+            dot.node(f"{i}", f"{i}")
+        for (i, j), v in np.ndenumerate(self.adjacency):
+            if v > 0:
+                label = f"{v}"
+                color="black"
+                if pheromones is not None:
+                    color = f"gray{int(90 - 90 * pheromones[i,j] / np.max(pheromones))}"
+                    if pheromones[i, j] <= eps:
+                        label = ""
+                    else:
+                        label = f"{pheromones[i,j]:.2f}"
+                dot.edge(f"{i}", f"{j}", label=label, color=color)
+
+        for i in range(self.adjacency.shape[0]):
+            state = []
+            start = []
+            goal = []
+            for j, agent in enumerate(self.agents):
+                if agent.state == i:
+                    state.append(j)
+                if agent.start == i:
+                    start.append(j)
+                if agent.goal == i:
+                    goal.append(j)
+            if len(state) > 0:
+                s = f"state: {state}"
+                dot.node(f"state{i}", label=s, color="blue")
+                dot.edge(f"state{i}", f"{i}", color="blue")
+            if len(start) > 0:
+                s = f"start: {start}"
+                dot.node(f"start{i}", label=s, color="green")
+                dot.edge(f"start{i}", f"{i}", color="green")
+            if len(goal) > 0:
+                s = f"goal: {goal}"
+                dot.node(f"goal{i}", label=s, color="red")
+                dot.edge(f"goal{i}", f"{i}", color="red")
+        if render:
+            dot.render(tempfile.mktemp('.gv'), view=True)
+        return dot
 
     @property
     def nodes(self):
@@ -98,11 +176,12 @@ class GraphWorld:
             "max_best_distance" : self.max_best_distance
         }])
 
+
 class TestProblem:
     def __init__(self, seed=None):
         self.random = np.random.RandomState(seed=seed)
 
-    def graph_prolem(self, G, start=0, goal=1, agents=None,**_):
+    def graph_prolem(self, G, start=0, goal=1, agents=None, **_) -> GraphWorld:
         if agents is None:
             agents = [NavigationAgent(start=start, goal=goal)]
         else:
@@ -112,8 +191,8 @@ class TestProblem:
                 agent.state = start
         return GraphWorld(adjacency=nx.adj_matrix(G).todense(), agents=agents)
 
-    def watts_strogatz_problem(self, nodes, k, p, start=0, goal=1, **kwargs):
-        G = nx.watts_strogatz_graph(nodes, k, p)
+    def watts_strogatz_problem(self, nodes, k, p, seed=42, start=0, goal=1, **kwargs):
+        G = nx.watts_strogatz_graph(nodes, k, p, seed=seed)
         for e in G.edges():
             G[e[0]][e[1]]['weight'] = 0.5 + self.random.rand()
 
@@ -170,8 +249,9 @@ class TestProblem:
 
 
 if __name__ == "__main__":
-    world = TestProblem().hard_1()
-    print(f"nodes: {world.nodes}, edges: {world.egdes}")
-    plt.figure()
-    world.draw_adjacency()
-    plt.show()
+    from src.aco_mapf.AcoAgent import *
+    colony = Colony()
+    agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
+    world = TestProblem().hard_1(agents=agents)
+    for _ in range(300):
+        world.step()

@@ -57,6 +57,9 @@ class AcoAgent(NavigationAgent):
     def initialize_pheromones(self):
         if self.colony.pheromones is None:
             self.colony.pheromones = np.ones_like(self.world.adjacency)
+            for (i, j), v in np.ndenumerate(self.world.adjacency):
+                if v == 0:
+                    self.colony.pheromones[i, j] = 0
         else:
             assert self.colony.pheromones.shape == self.world.adjacency.shape
 
@@ -68,7 +71,7 @@ class AcoAgent(NavigationAgent):
         """
         if not forward:
             i, j = j, i
-        return self.colony.pheromones[i, j] ** alpha + (1 / self.world.adjacency[i, j]) ** beta
+        return self.colony.pheromones[i, j] ** alpha * (1 / self.world.adjacency[i, j]) ** beta
 
     def decision(self, **kwargs) -> int:
         """
