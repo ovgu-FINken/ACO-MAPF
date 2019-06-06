@@ -20,9 +20,12 @@ def normalize_matrix(m: np.matrix):
 class Colony:
     pheromones: np.matrix
 
-    def __init__(self, pheromones=None):
+    def __init__(self, pheromones=None, ant=None):
         self.pheromones = pheromones
         self.ants = []
+        if ant is not None:
+            self.add_ant(ant)
+        self.best_path = None
 
     def add_ant(self, ant):
         self.ants.append(ant)
@@ -35,7 +38,7 @@ class AcoAgent(NavigationAgent):
     pheromones: np.matrix
     data: list
     random: np.random.RandomState
-
+    best_path: list
     def __init__(self, seed=None, colony=None, **kwargs):
         NavigationAgent.__init__(self, **kwargs)
         self.data = []
@@ -45,6 +48,7 @@ class AcoAgent(NavigationAgent):
         self.colony = colony if colony is not None else Colony(ant=self)
         self.colony.add_ant(self)
         self.stuck = False
+        self.best_path = None
 
     def register_world(self, world):
         NavigationAgent.register_world(self, world)
@@ -81,18 +85,12 @@ class AcoAgent(NavigationAgent):
         probs = {k: self.transition_value(self.state, k, **kwargs) for k in new}
         return fitness_proportional_selection(probs, random=self.random.rand())
 
-    def path_distance(self, path) -> float:
-        d: float = 0.0
-        for i, j in zip(path[:-1], path[1:]):
-            d += self.world.adjacency[i, j]
-        return d
-
     def put_pheromones(self, c_t=1.0, c_d=1.0):
         path = self.path
         if not self.forward:
             path.reverse()
 
-        amount = c_t * len(path) + c_d * self.path_distance(path)
+        amount = c_t * len(path) + c_d * self.world.path_distance(path)
         for i, j in zip(path[:-1], path[1:]):
             self.colony.pheromones[i, j] += amount
 
@@ -123,6 +121,16 @@ class AcoAgent(NavigationAgent):
         self.stuck = False
 
     def daemon_actions(self, **kwargs):
+        if self.arrived:
+            path = self.path
+            if not self.forward:
+                path.reverse()
+            if self.world.path_distance(path) < self.world.path_distance(self.colony.best_path):
+                self.colony.best_path = path
+            if self.world.path_distance(path) < self.world.path_distance(self.best_path):
+                self.best_path = path
+            if self.world.path_distance(path) < self.world.path_distance(self.world.best_path):
+                self.world.best_path = path
         if self.arrived or self.stuck:
             self.reset(**kwargs)
 
@@ -134,10 +142,11 @@ class AcoAgent(NavigationAgent):
 
 
 if __name__ == '__main__':
-    world = TestProblem().easy_4()
+    world = TestProblem().hard_2()
     colony = Colony()
     agents = [AcoAgent(colony=colony, start=world.agents[0].start, goal=world.agents[0].goal) for _ in range(10)]
     world.update_agents(agents)
     for _ in range(100):
         world.step()
     print(f"{colony.pheromones}")
+    print(world.get_data())
