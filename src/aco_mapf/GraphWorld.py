@@ -9,13 +9,19 @@ import tempfile
 
 class NavigationAgent(object):
 
-    def __init__(self, start: int = 0, goal: int = 1, state: int = None):
+    step_count: int
+    def __init__(self, start: int = 0, goal: int = 1, state: int = None, **kwargs):
+        self.kwargs = kwargs
         self.start = start
         self.goal = goal
+        self.step_count = 0
         if state is None:
             self.state = start
         else:
             self.state = state
+
+    def transition_options(self):
+        self.world.get_neighbours(self.state)
 
     def step(self):
         pass
@@ -38,11 +44,8 @@ class GraphWorld:
         self.graph_pos = nx.kamada_kawai_layout(self.graph)
         self.agents = agents
         self.best_path = None
-        if self.agents is None:
-            self.agents = [NavigationAgent()]
+        self.update_agents(agents=agents)
 
-        for agent in self.agents:
-            agent.register_world(self)
 
     def update_agents(self, agents: NavigationAgent):
         """
@@ -50,8 +53,12 @@ class GraphWorld:
         :type agents: NavigationAgent
         """
         self.agents = agents
-        for agent in self.agents:
+        if self.agents is None:
+            self.agents = [NavigationAgent()]
+
+        for i, agent in enumerate(self.agents):
             agent.register_world(self)
+            agent.name = f"A{i}"
 
     def draw_adjacency(self):
         return nx.draw(self.graph, self.graph_pos, labels={k : str(k) for k in self.graph.nodes()} )
@@ -95,7 +102,12 @@ class GraphWorld:
                 neighbours.append(i)
         return neighbours
 
-    def dot_graph(self, pheromones: np.matrix = None, eps: float = 0.01, render=False):
+    def dot_graph(self, pheromones: np.matrix = None,
+                  eps: float = 0.01,
+                  render=False,
+                  normalize_pheromone=True,
+                  show_decision=True
+                  ):
         dot = graphviz.Digraph(comment="representation of current world state", engine="neato")
         dot.attr(overlap="scale")
         dot.attr(K="1")
@@ -109,35 +121,52 @@ class GraphWorld:
                 color="black"
                 if pheromones is not None:
                     color = f"gray{int(90 - 90 * pheromones[i,j] / np.max(pheromones))}"
-                    if pheromones[i, j] <= eps:
+                    if pheromones[i, j] <= eps * np.max(pheromones):
                         label = ""
                     else:
-                        label = f"{pheromones[i,j]:.2f}"
+                        norm = np.max(pheromones) if normalize_pheromone else 1
+                        label = f"{pheromones[i,j] / norm:.2f}"
                 dot.edge(f"{i}", f"{j}", label=label, color=color)
 
         for i in range(self.adjacency.shape[0]):
             state = []
             start = []
             goal = []
-            for j, agent in enumerate(self.agents):
-                if agent.state == i:
-                    state.append(j)
+            for agent in self.agents:
+                if not show_decision:
+                    if agent.state == i:
+                        state.append(agent.graph_str)
                 if agent.start == i:
-                    start.append(j)
+                    start.append(agent.graph_str)
                 if agent.goal == i:
-                    goal.append(j)
-            if len(state) > 0:
-                s = f"state: {state}"
-                dot.node(f"state{i}", label=s, color="blue")
-                dot.edge(f"state{i}", f"{i}", color="blue")
+                    goal.append(agent.graph_str)
+            if not show_decision:
+                if len(state) > 0:
+                    s = f"{';'.join(state)}"
+                    dot.node(f"state{i}", label=s, color="blue", shape="box")
+                    dot.edge(f"state{i}", f"{i}", color="blue")
             if len(start) > 0:
-                s = f"start: {start}"
-                dot.node(f"start{i}", label=s, color="green")
+                s = f"start\n{';'.join(start)}"
+                dot.node(f"start{i}", label=s, color="green", shape="box")
                 dot.edge(f"start{i}", f"{i}", color="green")
             if len(goal) > 0:
-                s = f"goal: {goal}"
-                dot.node(f"goal{i}", label=s, color="red")
+                s = f"goal\n{';'.join(goal)}"
+                dot.node(f"goal{i}", label=s, color="red", shape="box")
                 dot.edge(f"goal{i}", f"{i}", color="red")
+
+        if show_decision:
+            for agent in self.agents:
+                dot.node(agent.graph_str, label=agent.graph_str, color="blue", shape="box")
+                dot.edge(agent.graph_str, f"{agent.state}", color="blue")
+                next = agent.transition_options()
+                value_sum = np.sum([agent.transition_value(agent.state, node, **agent.kwargs) for node in next])
+                if value_sum == 0:
+                    value_sum = 1
+                for node in next:
+                    value = agent.transition_value(agent.state, node, **agent.kwargs) / value_sum
+                    dot.edge(agent.graph_str, f"{node}", color="orange", fontcolor="orange", label=f"{value:.2f}")
+
+
         if render:
             dot.render(tempfile.mktemp('.gv'), view=True)
         return dot
@@ -150,9 +179,9 @@ class GraphWorld:
     def egdes(self):
         return len(self.graph.edges)
 
-    def step(self):
+    def step(self, **kwargs):
         for agent in self.agents:
-            agent.step()
+            agent.step(**kwargs)
 
     def path_distance(self, path: List[int]) -> float:
         d: float = 0.0
@@ -173,8 +202,13 @@ class GraphWorld:
     def get_data(self):
         return pd.DataFrame([{
             "median_best_distance": self.median_best_distance,
-            "max_best_distance" : self.max_best_distance
+            "max_best_distance" : self.max_best_distance,
+            "step_count" : self.step_count
         }])
+
+    @property
+    def step_count(self):
+        return np.sum([agent.step_count for agent in self.agents])
 
 
 class TestProblem:
@@ -251,7 +285,8 @@ class TestProblem:
 if __name__ == "__main__":
     from src.aco_mapf.AcoAgent import *
     colony = Colony()
-    agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
-    world = TestProblem().hard_1(agents=agents)
-    for _ in range(300):
-        world.step()
+    agents = [AcoAgent(seed = i, colony=colony) for i in range(3)]
+    world = TestProblem().easy_1(agents=agents)
+    for _ in range(400):
+        world.step(c_d = 0.01, c_t = 0.01)
+    dot = world.dot_graph(colony.pheromones, render=True)

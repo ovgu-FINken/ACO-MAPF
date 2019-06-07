@@ -1,4 +1,5 @@
 from src.aco_mapf.GraphWorld import *
+from src.aco_mapf.GraphWorld import NavigationAgent
 
 
 def fitness_proportional_selection(probs, random=np.random.rand()):
@@ -49,6 +50,8 @@ class AcoAgent(NavigationAgent):
         self.colony.add_ant(self)
         self.stuck = False
         self.best_path = None
+        self.name = "A"
+        self.step_count = 0
 
     def register_world(self, world):
         NavigationAgent.register_world(self, world)
@@ -63,15 +66,24 @@ class AcoAgent(NavigationAgent):
         else:
             assert self.colony.pheromones.shape == self.world.adjacency.shape
 
-    def transition_value(self, i, j, forward=True, alpha: float = 1.0, beta: float = 1.0, **_):
+    def transition_value(self, i, j, forward: bool = None, alpha: float = 1.0, beta: float = 1.0, **_):
         """
 
         :type alpha: float
         :type beta: float
         """
+        if forward is None:
+            forward = self.forward
         if not forward:
             i, j = j, i
         return self.colony.pheromones[i, j] ** alpha * (1 / self.world.adjacency[i, j]) ** beta
+
+    def transition_options(self):
+        return self.world.get_neighbours(self.state, exclude=self.path)
+
+    def transition_probabilities(self, new, **kwargs):
+        return {k: self.transition_value(self.state, k, **kwargs) for k in new}
+
 
     def decision(self, **kwargs) -> int:
         """
@@ -81,19 +93,20 @@ class AcoAgent(NavigationAgent):
         :type beta: float
         :return: decision for next state
         """
-        new = self.world.get_neighbours(self.state, exclude=self.path)
-        if not new:
+        new = self.transition_options()
+        if len(new) == 0:
             self.stuck = True
             return None
-        probs = {k: self.transition_value(self.state, k, **kwargs) for k in new}
-        return fitness_proportional_selection(probs, random=self.random.rand())
+        return fitness_proportional_selection(self.transition_probabilities(new, **kwargs), random=self.random.rand())
 
-    def put_pheromones(self, c_t=1.0, c_d=1.0):
+    def put_pheromones(self, c_t=1.0, c_d=1.0, **_):
         path = self.path
         if not self.forward:
             path.reverse()
 
-        amount = c_t * len(path) + c_d * self.world.path_distance(path)
+        assert path[0] == self.start
+        assert path[-1] == self.goal
+        amount = c_t * 1 / len(path) + c_d * 1 / self.world.path_distance(path)
         for i, j in zip(path[:-1], path[1:]):
             self.colony.pheromones[i, j] += amount
 
@@ -107,6 +120,13 @@ class AcoAgent(NavigationAgent):
     def pheromone_update(self, **kwargs):
         self.delayed_pheromone_update(**kwargs)
         self.vaporize()
+
+    @property
+    def graph_str(self) -> str:
+        s = self.name
+        if not self.forward:
+            s = s + "*"
+        return s
 
     @property
     def arrived(self) -> bool:
@@ -137,11 +157,13 @@ class AcoAgent(NavigationAgent):
         if self.arrived or self.stuck:
             self.reset(**kwargs)
 
-    def step(self):
-        self.state = self.decision()
+    def step(self, **kwargs):
+        self.step_count += 1
+        self.kwargs.update(kwargs)
+        self.state = self.decision(**self.kwargs)
         self.path.append(self.state)
-        self.pheromone_update()
-        self.daemon_actions()
+        self.pheromone_update(**self.kwargs)
+        self.daemon_actions(**self.kwargs)
 
 
 if __name__ == '__main__':
@@ -150,6 +172,6 @@ if __name__ == '__main__':
     agents = [AcoAgent(colony=colony, start=world.agents[0].start, goal=world.agents[0].goal) for _ in range(10)]
     world.update_agents(agents)
     for _ in range(100):
-        world.step()
+        world.step(c_t = 0.1, c_d = 0.1)
     print(f"{colony.pheromones}")
     print(world.get_data())
