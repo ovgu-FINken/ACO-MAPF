@@ -13,7 +13,6 @@ def fitness_proportional_selection(probs, random=np.random.rand()):
     print("selection could not pick an item - should not happen!")
     return probs[-1]
 
-
 def normalize_matrix(m: np.matrix):
     return m / np.sum(m)
 
@@ -52,6 +51,8 @@ class AcoAgent(NavigationAgent):
         self.best_path = None
         self.name = "A"
         self.step_count = 0
+        self.arrived_counter = 0
+        self.stuck_counter = 0
 
     def register_world(self, world):
         NavigationAgent.register_world(self, world)
@@ -63,10 +64,11 @@ class AcoAgent(NavigationAgent):
             for (i, j), v in np.ndenumerate(self.world.adjacency):
                 if v == 0:
                     self.colony.pheromones[i, j] = 0
+            self.colony.pheromones = normalize_matrix(self.colony.pheromones)
         else:
             assert self.colony.pheromones.shape == self.world.adjacency.shape
 
-    def transition_value(self, i, j, forward: bool = None, alpha: float = 1.0, beta: float = 1.0, **_):
+    def transition_value(self, i, j, forward: bool = None, alpha: float = 1.0, beta: float = 1.0, eps: float = 0.01, **_):
         """
 
         :type alpha: float
@@ -76,7 +78,7 @@ class AcoAgent(NavigationAgent):
             forward = self.forward
         if not forward:
             i, j = j, i
-        return self.colony.pheromones[i, j] ** alpha * (1 / self.world.adjacency[i, j]) ** beta
+        return self.colony.pheromones[i, j] ** alpha * (1 / self.world.adjacency[i, j]) ** beta + eps
 
     def transition_options(self):
         return self.world.get_neighbours(self.state, exclude=self.path)
@@ -145,6 +147,7 @@ class AcoAgent(NavigationAgent):
 
     def daemon_actions(self, **kwargs):
         if self.arrived:
+            self.arrived_counter += 1
             path = self.path
             if not self.forward:
                 path.reverse()
@@ -155,6 +158,8 @@ class AcoAgent(NavigationAgent):
             if self.world.path_distance(path) < self.world.path_distance(self.world.best_path):
                 self.world.best_path = path
         if self.arrived or self.stuck:
+            if self.stuck:
+                self.stuck_counter += 1
             self.reset(**kwargs)
 
     def step(self, **kwargs):
@@ -164,6 +169,12 @@ class AcoAgent(NavigationAgent):
         self.path.append(self.state)
         self.pheromone_update(**self.kwargs)
         self.daemon_actions(**self.kwargs)
+
+    @property
+    def best_time(self):
+        if self.best_path is None:
+            return np.nan
+        return len(self.best_path)
 
 
 if __name__ == '__main__':

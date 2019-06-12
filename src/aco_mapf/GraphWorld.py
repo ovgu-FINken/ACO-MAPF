@@ -45,6 +45,7 @@ class GraphWorld:
         self.agents = agents
         self.best_path = None
         self.update_agents(agents=agents)
+        self.step_count = 0
 
 
     def update_agents(self, agents: NavigationAgent):
@@ -180,6 +181,7 @@ class GraphWorld:
         return len(self.graph.edges)
 
     def step(self, **kwargs):
+        self.step_count += 1
         for agent in self.agents:
             agent.step(**kwargs)
 
@@ -202,12 +204,17 @@ class GraphWorld:
     def get_data(self):
         return pd.DataFrame([{
             "median_best_distance": self.median_best_distance,
-            "max_best_distance" : self.max_best_distance,
-            "step_count" : self.step_count
+            "max_best_distance": self.max_best_distance,
+            "world_step_count": self.step_count,
+            "agent_step_count": self.agent_step_count,
+            "arrived": sum([a.arrived_counter for a in self.agents]),
+            "stuck": sum([a.stuck_counter for a in self.agents]),
+            "median_best_time": np.median([a.best_time for a in self.agents]),
+            "median_best_time": np.min([a.best_time for a in self.agents]),
         }])
 
     @property
-    def step_count(self):
+    def agent_step_count(self):
         return np.sum([agent.step_count for agent in self.agents])
 
 
@@ -290,3 +297,4 @@ if __name__ == "__main__":
     for _ in range(400):
         world.step(c_d = 0.01, c_t = 0.01)
     dot = world.dot_graph(colony.pheromones, render=True)
+    world.get_data()

@@ -14,7 +14,7 @@ defusedxml==0.6.0
 docutils==0.14
 emcee==2.2.1
 entrypoints==0.3
-ExperimentRunner==0.1
+ExperimentRunner>=0.1
 george==0.3.1
 idna==2.8
 imagesize==1.1.0
