@@ -5,13 +5,13 @@ from src.aco_mapf.AcoAgent import AcoAgent, Colony
 from src.aco_mapf.GraphWorld import TestProblem
 
 @ipp.require("pandas as pd", "numpy as np", TestProblem, AcoAgent, Colony)
-def run_testprolem_aco(seed=0, num_agents=1,**kwargs):
+def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,**kwargs):
     c = Colony()
     agents = [AcoAgent(seed=seed+offset, colony=c, **kwargs) for offset in range(num_agents)]
     problem = TestProblem(seed=seed).hard_1(agents=agents)
     data = []
-    for _ in range(10):
-        for _ in range(50):
+    for _ in range(log_steps):
+        for _ in range(between_log_steps):
             problem.step()
         data.append(problem.get_data())
     return pd.concat(data)
