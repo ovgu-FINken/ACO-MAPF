@@ -33,7 +33,6 @@ class Colony:
     def __len__(self):
         return len(self.ants)
 
-
 class AcoAgent(NavigationAgent):
     pheromones: np.matrix
     data: list
@@ -101,6 +100,12 @@ class AcoAgent(NavigationAgent):
             return None
         return fitness_proportional_selection(self.transition_probabilities(new, **kwargs), random=self.random.rand())
 
+
+    def _put_pheromones_to_nodes(self, path, amount):
+        for i, j in zip(path[:-1], path[1:]):
+            #deposit amount for a specific edge
+            self.colony.pheromones[i, j] += amount / len(path)
+
     def put_pheromones(self, c_t=1.0, c_d=1.0, **_):
         path = self.path
         if not self.forward:
@@ -108,9 +113,9 @@ class AcoAgent(NavigationAgent):
 
         assert path[0] == self.start
         assert path[-1] == self.goal
-        amount = c_t * 1 / len(path) + c_d * 1 / self.world.path_distance(path)
-        for i, j in zip(path[:-1], path[1:]):
-            self.colony.pheromones[i, j] += amount
+        #amount of pheromones to deposit on the whole path
+        amount = c_t / len(path) + c_d / self.world.path_distance(path)
+        self._put_pheromones_to_nodes(path, amount)
 
     def delayed_pheromone_update(self, **kwargs) -> None:
         if self.arrived:
@@ -119,8 +124,10 @@ class AcoAgent(NavigationAgent):
     def vaporize(self):
         self.colony.pheromones = normalize_matrix(self.colony.pheromones)
 
-    def pheromone_update(self, **kwargs):
+    def pheromone_update(self, elitism_amount=0.0,**kwargs):
         self.delayed_pheromone_update(**kwargs)
+        if elitism_amount != 0.0 and self.best_path is not None:
+            self._put_pheromones_to_nodes(self.best_path, elitism_amount)
         self.vaporize()
 
     @property
@@ -179,10 +186,14 @@ class AcoAgent(NavigationAgent):
 
 if __name__ == '__main__':
     world = TestProblem().hard_2()
-    colony = Colony()
-    agents = [AcoAgent(colony=colony, start=world.agents[0].start, goal=world.agents[0].goal) for _ in range(10)]
+    colony1 = Colony()
+    colony2 = Colony()
+    agents = [AcoAgent(colony=colony1, start=world.agents[0].start, goal=world.agents[0].goal, elitism_amount=0.1) for _ in range(2)]
+    agents += [AcoAgent(colony=colony2, start=10, goal=20) for _ in range(2)]
+    agents += [AcoAgent(colony=colony2, start=20, goal=30) for _ in range(2)]
     world.update_agents(agents)
-    for _ in range(100):
+    for _ in range(1000):
         world.step(c_t = 0.1, c_d = 0.1)
-    print(f"{colony.pheromones}")
+    #print(f"{colony.pheromones}")
     print(world.get_data())
+    world.dot_graph(colony1.pheromones , render=True)
