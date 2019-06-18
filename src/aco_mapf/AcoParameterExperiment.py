@@ -18,7 +18,7 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
 
 
 def eval_testproblem_aco(df):
-    print(df.keys())
+    #print(df.keys())
     fitness = df["min_best_distance"].mean()
     return fitness
 
@@ -35,7 +35,6 @@ def run_experiment(name, interactive=False):
 
 def run_optimization(name, generations=20, runs=31, **kwargs):
     optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10, param_file=f"{name}.json", runs=runs, **kwargs)
-    optimizer.init_population(10)
     try:
         for _ in range(generations):
             print(f"{optimizer.generation} optimzer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
