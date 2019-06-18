@@ -212,7 +212,7 @@ class GraphWorld:
             "median_best_time": np.median([a.best_time for a in self.agents]),
             "min_best_time": np.min([a.best_time for a in self.agents]),
         }])
-        df.replace(np.inf, np.nan)
+        df = df.replace(np.inf, np.nan)
         return df
 
     @property
