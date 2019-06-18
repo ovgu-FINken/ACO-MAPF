@@ -18,7 +18,8 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
 
 
 def eval_testproblem_aco(df):
-    return df["max_best_distance"].mean()
+    print(df.head(3))
+    return df["min_best_distance"].mean()
 
 
 def run_experiment(name, interactive=False):
@@ -31,15 +32,21 @@ def run_experiment(name, interactive=False):
     print("saving")
     experiment.save_results(f"{name}.pkl")
 
-def run_optimization(name, generations=100):
-    optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10, param_file=f"{name}.json")
+def run_optimization(name, generations=100, runs=31):
+    optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10, param_file=f"{name}.json", runs=runs)
     optimizer.init_population(10)
-    for _ in range(generations):
-        print(f"{optimizer.generation} optimzer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
-        optimizer.run_generation()
-    optimizer.save_results(f"{name}.pkl")
-    optimizer.save_parameters(f"{name}.json")
+    try:
+        for _ in range(generations):
+            print(f"{optimizer.generation} optimzer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
+            print([str(p) for p in optimizer.mapping])
+            print("\n\n\n")
+            optimizer.run_generation()
+        optimizer.save_results(f"{name}.pkl")
+        optimizer.save_parameters(f"{name}.json")
+    except KeyboardInterrupt:
+        print("interrupted ...")
+    return optimizer
 
 
 if __name__ == "__main__":
-    run_optimization("optimize")
+    run_optimization("optimize", runs=1)
