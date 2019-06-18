@@ -33,16 +33,22 @@ def run_experiment(name, interactive=False):
     print("saving")
     experiment.save_results(f"{name}.pkl")
 
-def run_optimization(name, generations=20, runs=31, **kwargs):
-    optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10, param_file=f"{name}.json", runs=runs, **kwargs)
+def run_optimization(filename, generations=20, runs=31, outfile=None, data_file=None, **kwargs):
+    optimizer = Optimizer(function=run_testprolem_aco,
+                          evaluation_function=eval_testproblem_aco,
+                          population_size=10,
+                          param_file=filename,
+                          runs=runs, **kwargs)
     try:
         for _ in range(generations):
             print(f"{optimizer.generation} optimzer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
             print([str(p) for p in optimizer.mapping])
             print("\n\n\n")
             optimizer.run_generation()
-        optimizer.save_results(f"{name}.pkl")
-        optimizer.save_parameters(f"{name}.json")
+        if data_file:
+            optimizer.save_results(data_file)
+        if outfile:
+            optimizer.save_parameters(outfile)
     except KeyboardInterrupt:
         print("interrupted ...")
     return optimizer

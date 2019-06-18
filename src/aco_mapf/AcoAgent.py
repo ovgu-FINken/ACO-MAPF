@@ -121,14 +121,20 @@ class AcoAgent(NavigationAgent):
         if self.arrived:
             self.put_pheromones(**kwargs)
 
-    def vaporize(self):
-        self.colony.pheromones = normalize_matrix(self.colony.pheromones)
+    def vaporize(self, evaporation_method="normalize", evaporation_rate=0.99, **_):
+        if evaporation_method == "normalize":
+            self.colony.pheromones = normalize_matrix(self.colony.pheromones)
+        elif evaporation_method == "default_aco":
+            self.colony.pheromones = evaporation_rate ** (1/len(self.colony.ants)) * self.colony.pheromones
+        else:
+            print(f"evaporation method '{evaporation_method}' does not exist")
+            raise NotImplementedError()
 
-    def pheromone_update(self, elitism_amount=0.0,**kwargs):
+    def pheromone_update(self, elitism_amount=0.0, **kwargs):
         self.delayed_pheromone_update(**kwargs)
         if elitism_amount != 0.0 and self.best_path is not None:
             self._put_pheromones_to_nodes(self.best_path, elitism_amount)
-        self.vaporize()
+        self.vaporize(**kwargs)
 
     @property
     def graph_str(self) -> str:
@@ -188,7 +194,7 @@ if __name__ == '__main__':
     world = TestProblem().hard_2()
     colony1 = Colony()
     colony2 = Colony()
-    agents = [AcoAgent(colony=colony1, start=world.agents[0].start, goal=world.agents[0].goal, elitism_amount=0.1) for _ in range(2)]
+    agents = [AcoAgent(colony=colony1, start=world.agents[0].start, goal=world.agents[0].goal, elitism_amount=0.1, evaporation_method="default_aco") for _ in range(2)]
     agents += [AcoAgent(colony=colony2, start=10, goal=20) for _ in range(2)]
     agents += [AcoAgent(colony=colony2, start=20, goal=30) for _ in range(2)]
     world.update_agents(agents)
