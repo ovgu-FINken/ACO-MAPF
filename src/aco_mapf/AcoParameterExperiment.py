@@ -23,8 +23,7 @@ def eval_testproblem_aco(df):
 
 def run_experiment(name, interactive=False):
     print(f"running experiment for parameters {name}.json, saving to {name}.pkl")
-    experiment = Experiment(function=run_testprolem_aco)
-    experiment.load_parameters(f"{name}.json")
+    experiment = Experiment(function=run_testprolem_aco, param_file=f"{name}.json")
     print(f"Got {len(experiment.parameters)} parameters.")
     experiment.generate_tasks()
     print(f"Generating running {len(experiment.tasks)} tasks.")
@@ -33,8 +32,7 @@ def run_experiment(name, interactive=False):
     experiment.save_results(f"{name}.pkl")
 
 def run_optimization(name, generations=100):
-    optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10)
-    optimizer.load_parameters(f"{name}.json")
+    optimizer = Optimizer(function=run_testprolem_aco, evaluation_function=eval_testproblem_aco, population_size=10, param_file=f"{name}.json")
     optimizer.init_population(10)
     for _ in range(generations):
         print(f"{optimizer.generation} optimzer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
@@ -44,4 +42,4 @@ def run_optimization(name, generations=100):
 
 
 if __name__ == "__main__":
-    run_experiment(sys.argv[-1])
+    run_optimization("optimize")
