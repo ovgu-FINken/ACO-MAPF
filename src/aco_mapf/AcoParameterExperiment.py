@@ -18,6 +18,7 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
 
 
 def eval_testproblem_aco(df):
+    print(df.keys())
     fitness = df["min_best_distance"].mean()
     return fitness
 
