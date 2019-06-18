@@ -194,7 +194,7 @@ class GraphWorld:
         return d
 
     @property
-    def max_best_distance(self):
+    def min_best_distance(self):
         return self.path_distance(self.best_path)
 
     @property
@@ -202,16 +202,18 @@ class GraphWorld:
         return np.median([self.path_distance(a.best_path) for a in self.agents])
 
     def get_data(self):
-        return pd.DataFrame([{
+        df = pd.DataFrame([{
             "median_best_distance": self.median_best_distance,
-            "max_best_distance": self.max_best_distance,
+            "min_best_distance": self.min_best_distance,
             "world_step_count": self.step_count,
             "agent_step_count": self.agent_step_count,
             "arrived": sum([a.arrived_counter for a in self.agents]),
             "stuck": sum([a.stuck_counter for a in self.agents]),
             "median_best_time": np.median([a.best_time for a in self.agents]),
-            "median_best_time": np.min([a.best_time for a in self.agents]),
+            "min_best_time": np.min([a.best_time for a in self.agents]),
         }])
+        df.replace(np.inf, np.nan)
+        return df
 
     @property
     def agent_step_count(self):
