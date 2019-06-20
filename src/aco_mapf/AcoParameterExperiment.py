@@ -46,15 +46,13 @@ def eval_df(data, step=None, avg="mean", property="min_best_distance", verbose=F
         print(f"fitness: {fitness}")
     return fitness
 
-def run_experiment(name):
-    print(f"running experiment for parameters {name}.json, saving to {name}.pkl")
-    experiment = Experiment(function=run_testprolem_aco, param_file=f"{name}.json")
-    print(f"Got {len(experiment.parameters)} parameters.")
+def run_experiment(filename, runs=31, data_file=None, **kwargs):
+    experiment = Experiment(function=run_testprolem_aco,
+                            param_file=filename,
+                            runs=runs, **kwargs)
     experiment.generate_tasks()
-    print(f"Generating running {len(experiment.tasks)} tasks.")
-    experiment.run_map()
-    print("saving")
-    experiment.save_results(f"{name}.pkl")
+    if data_file:
+        experiment.save_results(data_file)
 
 def run_optimization(filename, generations=20, runs=31, outfile=None, data_file=None, eval_kwargs={}, population_size=10, **kwargs):
     optimizer = Optimizer(function=run_testprolem_aco,
