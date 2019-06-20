@@ -204,7 +204,7 @@ class GraphWorld:
         return np.median([self.path_distance(a.best_path) for a in self.agents])
 
     def get_data(self):
-        df = pd.DataFrame([{
+        return {
             "median_best_distance": self.median_best_distance,
             "min_best_distance": self.min_best_distance,
             "world_step_count": self.step_count,
@@ -213,13 +213,11 @@ class GraphWorld:
             "stuck": sum([a.stuck_counter for a in self.agents]),
             "median_best_time": np.median([a.best_time for a in self.agents]),
             "min_best_time": np.min([a.best_time for a in self.agents]),
-            "median_greedy_distance": np.median([a.greedy_path_dist for a in self.agents]),
-            "min_greedy_distance": np.min([a.greedy_path_dist for a in self.agents]),
-            "median_greedy_time": np.median([a.greedy_path_time for a in self.agents]),
-            "min_greedy_time": np.min([a.greedy_path_time for a in self.agents]),
-        }])
-        df = df.replace(np.inf, np.nan)
-        return df
+            "greedy_distance": self.agents[0].greedy_path_dist,
+            "greedy_time": self.agents[0].greedy_path_time,
+        }
+        #df = df.replace(np.inf, np.nan)
+        #return df
 
     @property
     def agent_step_count(self):
@@ -316,6 +314,6 @@ if __name__ == "__main__":
     agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
     world = TestProblem().hard_1(agents=agents)
 
-    cProfile.run("some_steps_with_logging(world, steps=100)", sort=2)
+    cProfile.run("some_steps_with_logging(world, steps=500)", sort=2)
     dot = world.dot_graph(colony.pheromones, render=True)
     print(world.get_data())
