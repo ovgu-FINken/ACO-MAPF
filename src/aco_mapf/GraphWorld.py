@@ -237,7 +237,7 @@ class TestProblem:
     def watts_strogatz_problem(self, nodes, k, p, seed=42, start=0, goal=1, **kwargs):
         G = nx.watts_strogatz_graph(nodes, k, p, seed=seed)
         for e in G.edges():
-            G[e[0]][e[1]]['weight'] = 0.5 + self.random.rand()
+            G[e[0]][e[1]]['weight'] = (10 * self.random.rand())**2
 
         return self.graph_prolem(G, start=start, goal=goal, **kwargs)
 
