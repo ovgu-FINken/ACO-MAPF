@@ -52,6 +52,8 @@ class AcoAgent(NavigationAgent):
         self.step_count = 0
         self.arrived_counter = 0
         self.stuck_counter = 0
+        self._greedy_path = [self.start]
+        self._greedy_path_step = -1
 
     def register_world(self, world):
         NavigationAgent.register_world(self, world)
@@ -193,10 +195,14 @@ class AcoAgent(NavigationAgent):
 
     @property
     def greedy_path(self):
+        if self._greedy_path_step == self.step_count:
+            return self._greedy_path
         path = [self.start]
         while path[-1] != self.goal:
             new = self.world.get_neighbours(path[-1], exclude=path)
             if len(new) < 1:
+                self._greedy_path_step = self.step_count
+                self._greedy_path = path
                 return path
             probs = self.transition_probabilities(new, state=path[-1], forward=True, **self.kwargs)
             best_value = 0
@@ -206,6 +212,8 @@ class AcoAgent(NavigationAgent):
                     best_value = v
                     best_key = k
             path.append(best_key)
+        self._greedy_path_step = self.step_count
+        self._greedy_path = path
         return path
 
     @property
