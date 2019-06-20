@@ -191,8 +191,8 @@ class GraphWorld:
         d: float = 0.0
         if path is None:
             return np.inf
-        for i, j in zip(path[:-1], path[1:]):
-            d += self.adjacency[i, j]
+        for i, v in enumerate(path[1:]):
+            d += self.adjacency[path[i], v]
         return d
 
     @property
@@ -314,6 +314,6 @@ if __name__ == "__main__":
     agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
     world = TestProblem().hard_1(agents=agents)
 
-    cProfile.run("some_steps_with_logging(world, steps=500)", sort=2)
+    cProfile.run("some_steps_with_logging(world, steps=500)", sort=1)
     dot = world.dot_graph(colony.pheromones, render=True)
     print(world.get_data())

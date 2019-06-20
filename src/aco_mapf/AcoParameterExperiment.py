@@ -26,7 +26,7 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
         for _ in range(between_log_steps):
             problem.step()
         data.append(problem.get_data())
-    df = pd.concat(data)
+    df = pd.DataFrame(data)
     return df.replace(np.inf, np.nan)
 
 
