@@ -6,7 +6,6 @@ import pandas as pd
 import graphviz
 import tempfile
 
-
 class NavigationAgent(object):
 
     step_count: int
@@ -46,6 +45,7 @@ class GraphWorld:
         self.best_path = None
         self.update_agents(agents=agents)
         self.step_count = 0
+        self._neighbours = {}
 
 
     def update_agents(self, agents: NavigationAgent):
@@ -97,11 +97,13 @@ class GraphWorld:
     def get_neighbours(self, state: int, exclude: List[int] = []) -> List[int]:
         if state is None:
             raise ValueError
-        neighbours = []
-        for i in range(self.nodes):
-            if self.adjacency[state, i] > 0 and i not in exclude:
-                neighbours.append(i)
-        return neighbours
+        if state not in self._neighbours:
+            neighbours = set()
+            for i in range(self.nodes):
+                if self.adjacency[state, i] > 0:
+                    neighbours.add(i)
+            self._neighbours[state] = neighbours
+        return self._neighbours[state].difference(exclude)
 
     def dot_graph(self, pheromones: np.matrix = None,
                   eps: float = 0.01,
@@ -294,13 +296,19 @@ class TestProblem:
         G.add_edge(6, 8, weight=1.0)
         return self.graph_prolem(G, goal=7, **kwargs)
 
-
 if __name__ == "__main__":
+
+    import cProfile
     from src.aco_mapf.AcoAgent import *
+
+    def some_steps(world, steps=500):
+        for _ in range(steps):
+            world.step()
+
     colony = Colony()
-    agents = [AcoAgent(seed = i, colony=colony) for i in range(3)]
-    world = TestProblem().easy_1(agents=agents)
-    for _ in range(400):
-        world.step(c_d = 0.01, c_t = 0.01)
+    agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
+    world = TestProblem().hard_1(agents=agents)
+
+    cProfile.run("some_steps(world, steps=500)", sort=2)
     dot = world.dot_graph(colony.pheromones, render=True)
     print(world.get_data())
