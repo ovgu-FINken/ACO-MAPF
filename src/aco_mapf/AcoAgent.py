@@ -82,8 +82,10 @@ class AcoAgent(NavigationAgent):
     def transition_options(self):
         return self.world.get_neighbours(self.state, exclude=self.path)
 
-    def transition_probabilities(self, new, **kwargs):
-        return {k: self.transition_value(self.state, k, **kwargs) for k in new}
+    def transition_probabilities(self, new, state=None, **kwargs):
+        if state is None:
+            state = self.state
+        return {k: self.transition_value(state, k, **kwargs) for k in new}
 
 
     def decision(self, **kwargs) -> int:
@@ -196,14 +198,14 @@ class AcoAgent(NavigationAgent):
             new = self.world.get_neighbours(path[-1], exclude=path)
             if len(new) < 1:
                 return path
-            probs = self.transition_probabilities(new, forward=True, **self.kwargs)
+            probs = self.transition_probabilities(new, state=path[-1], forward=True, **self.kwargs)
             best_value = 0
             best_key = 0
             for k, v in probs.items():
                 if v > best_value:
                     best_value = v
                     best_key = k
-            path.append(k)
+            path.append(best_key)
         return path
 
     @property

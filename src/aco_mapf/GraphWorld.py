@@ -303,4 +303,4 @@ if __name__ == "__main__":
     for _ in range(400):
         world.step(c_d = 0.01, c_t = 0.01)
     dot = world.dot_graph(colony.pheromones, render=True)
-    world.get_data()
+    print(world.get_data())
