@@ -51,6 +51,7 @@ def run_experiment(filename, runs=31, data_file=None, **kwargs):
                             param_file=filename,
                             runs=runs, **kwargs)
     experiment.generate_tasks()
+    experiment.run_map()
     if data_file:
         experiment.save_results(data_file)
 
