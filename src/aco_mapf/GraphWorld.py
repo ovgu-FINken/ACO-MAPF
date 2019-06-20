@@ -305,10 +305,17 @@ if __name__ == "__main__":
         for _ in range(steps):
             world.step()
 
+    def some_steps_with_logging(world, steps=500):
+        data = []
+        for _ in range(steps):
+            world.step()
+            data.append(world.get_data())
+        return data
+
     colony = Colony()
     agents = [AcoAgent(seed = i, colony=colony) for i in range(10)]
     world = TestProblem().hard_1(agents=agents)
 
-    cProfile.run("some_steps(world, steps=500)", sort=2)
+    cProfile.run("some_steps_with_logging(world, steps=100)", sort=2)
     dot = world.dot_graph(colony.pheromones, render=True)
     print(world.get_data())
