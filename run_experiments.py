@@ -24,7 +24,7 @@ def analyze(args):
     datafile = None
     if args.data_out:
         datafile = args.data_out
-    run_optimization(args.analyze, runs=args.runs, data_file=datafile, with_cluster=args.parallel)
+    run_experiment(args.analyze, runs=args.runs, data_file=datafile, with_cluster=args.parallel)
 
 
 
