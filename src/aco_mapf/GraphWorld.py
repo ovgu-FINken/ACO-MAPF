@@ -211,6 +211,10 @@ class GraphWorld:
             "stuck": sum([a.stuck_counter for a in self.agents]),
             "median_best_time": np.median([a.best_time for a in self.agents]),
             "min_best_time": np.min([a.best_time for a in self.agents]),
+            "median_greedy_distance": np.median([a.greedy_path_dist for a in self.agents]),
+            "min_greedy_distance": np.min([a.greedy_path_dist for a in self.agents]),
+            "median_greedy_time": np.median([a.greedy_path_time for a in self.agents]),
+            "min_greedy_time": np.min([a.greedy_path_time for a in self.agents]),
         }])
         df = df.replace(np.inf, np.nan)
         return df

@@ -29,12 +29,6 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
     return pd.concat(data)
 
 
-def eval_min_best_distance_mean(df):
-    #print(df.keys())
-    fitness = df["min_best_distance"].mean()
-    return fitness
-
-
 def eval_df(data, step=None, avg="mean", property="min_best_distance", verbose=False, **kwargs):
     if(len(kwargs) > 0):
         print(f"eval got unrecognized kwargs:\n{kwargs}")

@@ -189,6 +189,37 @@ class AcoAgent(NavigationAgent):
             return np.nan
         return len(self.best_path)
 
+    @property
+    def greedy_path(self):
+        path = [self.start]
+        while path[-1] != self.goal:
+            new = self.world.get_neighbours(path[-1], exclude=path)
+            if len(new) < 1:
+                return path
+            probs = self.transition_probabilities(new, forward=True, **self.kwargs)
+            best_value = 0
+            best_key = 0
+            for k, v in probs.items():
+                if v > best_value:
+                    best_value = v
+                    best_key = k
+            path.append(k)
+        return path
+
+    @property
+    def greedy_path_dist(self):
+        p = self.greedy_path
+        if p[-1] == self.goal:
+            return self.world.path_distance(p)
+        return np.nan
+
+    @property
+    def greedy_path_time(self):
+        p = self.greedy_path
+        if p[-1] == self.goal:
+            return len(p)
+        return np.nan
+
 
 if __name__ == '__main__':
     world = TestProblem().hard_2()
