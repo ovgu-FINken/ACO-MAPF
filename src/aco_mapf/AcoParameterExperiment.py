@@ -69,13 +69,14 @@ def run_optimization(filename, generations=20, runs=31, outfile=None, data_file=
             print(optimizer.population)
             optimizer.run_generation()
             print(optimizer.fitness)
-            print("\n\n\n")
+            print("\n\n")
         if data_file:
             optimizer.save_results(data_file)
         if outfile:
             optimizer.save_parameters(outfile)
     except KeyboardInterrupt:
-        print("interrupted ...")
+        print("interrupted by keyboard")
+    print(f"best run was: {optimizer.global_best_identifier}")
     return optimizer
 
 

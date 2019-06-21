@@ -231,6 +231,13 @@ class AcoAgent(NavigationAgent):
         return np.nan
 
 
+class TimeAwareAnt(AcoAgent):
+    def __init__(self, **kwargs):
+        AcoAgent.__init__(self, **kwargs)
+
+    #TODO implement methods and time extended pheromones
+
+
 if __name__ == '__main__':
     world = TestProblem().hard_2()
     colony1 = Colony()
