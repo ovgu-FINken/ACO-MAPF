@@ -38,7 +38,7 @@ def eval_df(data, step=None, avg="mean|median", property="min_best_distance", ve
     df = data
     if step is not None:
         if step > 0:
-            df = df.loc[df.world_steps == step]
+            df = df.loc[df.world_step_count == step]
         elif step < 0:
             raise NotImplementedError
     fitness = np.nan
