@@ -18,7 +18,15 @@ def optimize(args):
         eval_kwargs["property"] = args.property
     if args.step:
         eval_kwargs["step"] = args.step
-    run_optimization(args.optimize, runs=args.runs, generations=args.generations, outfile=outfile, data_file=datafile, with_cluster=args.parallel, population_size=args.population)
+    run_optimization(args.optimize,
+                     runs=args.runs,
+                     generations=args.generations,
+                     outfile=outfile,
+                     data_file=datafile,
+                     with_cluster=args.parallel,
+                     population_size=args.population,
+                     eval_kwargs=eval_kwargs
+                     )
 
 def analyze(args):
     datafile = None
@@ -40,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--parallel", action="store_true", default=True)
     parser.add_argument("--sequential", action="store_false", dest="parallel")
     parser.add_argument("--step", type=int, help="step number of the fitness evaluation")
-    parser.add_argument("--average", help="used as the averaging method: either mean or median")
+    parser.add_argument("--average", help="used as the averaging method: either mean or median", default="mean")
     parser.add_argument("--median", help="use median as averaging method in evaluation", action="store_const", const="median", dest="average")
     parser.add_argument("--property", help="property to use in the evaluation i.e. min_best_distance")
     parser.add_argument("--analyze", help='file of parameters to analyze', type=str)
