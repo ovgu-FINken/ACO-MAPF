@@ -10,17 +10,19 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
     agents = [AcoAgent(seed=seed+offset, colony=c, **kwargs) for offset in range(num_agents)]
     #problem = None
     if problem == "hard_1":
-        problem = TestProblem(seed=seed).hard_1(agents=agents)
+        problem = TestProblem(seed=1).hard_1(agents=agents)
     elif problem == "hard_2":
-        problem = TestProblem(seed=seed).hard_2(agents=agents)
+        problem = TestProblem(seed=1).hard_2(agents=agents)
+    elif problem == "hard_3":
+        problem = TestProblem(seed=1).hard_3(agents=agents)
     elif problem == "easy_1":
-        problem = TestProblem(seed=seed).easy_1(agents=agents)
+        problem = TestProblem(seed=1).easy_1(agents=agents)
     elif problem == "easy_2":
-        problem = TestProblem(seed=seed).easy_2(agents=agents)
+        problem = TestProblem(seed=1).easy_2(agents=agents)
     elif problem == "easy_3":
-        problem = TestProblem(seed=seed).easy_3(agents=agents)
+        problem = TestProblem(seed=1).easy_3(agents=agents)
     elif problem == "easy_4":
-        problem = TestProblem(seed=seed).easy_4(agents=agents)
+        problem = TestProblem(seed=1).easy_4(agents=agents)
     data = []
     for _ in range(log_steps):
         for _ in range(between_log_steps):

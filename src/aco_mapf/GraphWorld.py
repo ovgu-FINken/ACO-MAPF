@@ -251,6 +251,9 @@ class TestProblem:
     def hard_2(self, **kwargs):
         return self.watts_strogatz_problem(42, 4, 0.05, seed=23, goal=27, **kwargs)
 
+    def hard_3(self, **kwargs):
+        return self.watts_strogatz_problem(100, 4, 0.05, seed=42, goal=65, **kwargs)
+
     def easy_1(self, **kwargs):
         G = nx.Graph()
         G.add_edge(0, 1, weight=1)
@@ -295,9 +298,12 @@ class TestProblem:
         return self.graph_prolem(G, goal=7, **kwargs)
 
 if __name__ == "__main__":
-
-    import cProfile
     from src.aco_mapf.AcoAgent import *
+    a = AcoAgent()
+    prolem = TestProblem(seed=1).hard_3(agents=[a])
+    prolem.dot_graph(render=True)
+    """
+    import cProfile
 
     def some_steps(world, steps=500):
         for _ in range(steps):
@@ -317,3 +323,4 @@ if __name__ == "__main__":
     cProfile.run("some_steps_with_logging(world, steps=500)", sort=1)
     dot = world.dot_graph(colony.pheromones, render=True)
     print(world.get_data())
+    """
