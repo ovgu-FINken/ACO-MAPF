@@ -18,6 +18,8 @@ def optimize(args):
         eval_kwargs["property"] = args.property
     if args.step:
         eval_kwargs["step"] = args.step
+    if args.verbose:
+        eval_kwargs["verbose"] = True
     run_optimization(args.optimize,
                      runs=args.runs,
                      generations=args.generations,
@@ -46,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--generations", help="number of generations to run", default=20, type=int)
     parser.add_argument("--population", help="population size", default=10, type=int)
     parser.add_argument("--parallel", action="store_true", default=True)
+    parser.add_argument("--verbose", action="store_true", default=False)
     parser.add_argument("--sequential", action="store_false", dest="parallel")
     parser.add_argument("--step", type=int, help="step number of the fitness evaluation")
     parser.add_argument("--average", help="used as the averaging method: either mean or median", default="mean")
