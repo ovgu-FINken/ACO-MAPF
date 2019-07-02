@@ -18,6 +18,11 @@ def normalize_matrix(m: np.matrix):
 
 
 class Colony:
+    """
+    very simple class to represent the pheromones for multiple ants
+    :pheromones matrix with pheromone values
+    :ants list with AcoAgents
+    """
     pheromones: np.matrix
 
     def __init__(self, pheromones=None, ant=None):
@@ -32,6 +37,46 @@ class Colony:
 
     def __len__(self):
         return len(self.ants)
+
+    def vaporize(self, evaporation_method="normalize", evaporation_rate=0.99, **_):
+        if evaporation_method == "normalize":
+            self.pheromones = normalize_matrix(self.pheromones)
+        elif evaporation_method == "default_aco":
+            self.pheromones = evaporation_rate ** (1/len(self.ants)) * self.pheromones
+        else:
+            print(f"evaporation method '{evaporation_method}' does not exist")
+            raise NotImplementedError()
+
+    def dissipate(self, dissipation_rate: float = 0.01, **_):
+        dissipation_matrix = -1 * self.pheromones * dissipation_rate
+        nodes = np.array([0.0 for _ in range(self.pheromones.shape[0])])
+        for i in range(self.pheromones.shape[0]):
+            nodes[i] = -1 * np.sum(dissipation_matrix[i,:])
+        for i in range(self.pheromones.shape[0]):
+            neighbours = self.ants[0].world.get_neighbours(i)
+            for j in neighbours:
+                dissipation_matrix[j, i] += nodes[i] / len(neighbours)
+        self.pheromones += dissipation_matrix
+
+class TimeAwareColony(Colony):
+    time_pheromones : np.matrix
+    time_frame : int
+    def __init__(self, **kwargs):
+        Colony.__init__(self, **kwargs)
+        self.time_frame = []
+        self.time_pheromones = None
+
+    def vaporize(self, evaporation_method="normalize", evaporation_rate=0.99, **kwargs):
+        Colony.vaporize(self, evaporation_method=evaporation_method, evaporation_rate=evaporation_rate, **kwargs)
+        for t in range(self.time_pheromones.shape[0]):
+            if evaporation_method == "normalize":
+                self.time_pheromones[t] = normalize_matrix(self.time_pheromones[t])
+            elif evaporation_method == "default_aco":
+                self.time_pheromones[t] = evaporation_rate ** (1/len(self.ants)) * self.time_pheromones[t]
+            else:
+                print(f"evaporation method '{evaporation_method}' does not exist")
+                raise NotImplementedError()
+
 
 class AcoAgent(NavigationAgent):
     pheromones: np.matrix
@@ -71,7 +116,6 @@ class AcoAgent(NavigationAgent):
 
     def transition_value(self, i, j, forward: bool = None, alpha: float = 1.0, beta: float = 1.0, eps: float = 0.01, **_):
         """
-
         :type alpha: float
         :type beta: float
         """
@@ -81,8 +125,20 @@ class AcoAgent(NavigationAgent):
             i, j = j, i
         return self.colony.pheromones[i, j] ** alpha * (1 / self.world.adjacency[i, j]) ** beta + eps
 
-    def transition_options(self):
-        return self.world.get_neighbours(self.state, exclude=self.path)
+    def transition_options(self, collision_check : bool = False, own_colony_collision: bool = False, backward_collision: bool = False, exclude_path: bool = True, **kwargs):
+        new = []
+        if exclude_path:
+            new = self.world.get_neighbours(self.state, exclude=self.path)
+        else:
+            new = self.world.get_neighbours(self.state)
+        if collision_check:
+            collidable_states = []
+            if own_colony_collision:
+                collidable_states = [x.state for x in world.agents if x is not self and (backward_collision and self.forward)]
+            else:
+                collidable_states = [x.state for x in world.agents if x.colony is not self.colony]
+            new = [x for x in new if x not in collidable_states]
+        return new
 
     def transition_probabilities(self, new, state=None, **kwargs):
         if state is None:
@@ -92,13 +148,12 @@ class AcoAgent(NavigationAgent):
 
     def decision(self, **kwargs) -> int:
         """
-
         :param kwargs:
         :type alpha: float
         :type beta: float
         :return: decision for next state
         """
-        new = self.transition_options()
+        new = self.transition_options(**kwargs)
         if len(new) == 0:
             self.stuck = True
             return None
@@ -138,7 +193,8 @@ class AcoAgent(NavigationAgent):
         self.delayed_pheromone_update(**kwargs)
         if elitism_amount != 0.0 and self.best_path is not None:
             self._put_pheromones_to_nodes(self.best_path, elitism_amount)
-        self.vaporize(**kwargs)
+        self.colony.vaporize(**kwargs)
+        self.colony.dissipate(**kwargs)
 
     @property
     def graph_str(self) -> str:
@@ -195,6 +251,7 @@ class AcoAgent(NavigationAgent):
 
     @property
     def greedy_path(self):
+        # caching the path for each step
         if self._greedy_path_step == self.step_count:
             return self._greedy_path
         path = [self.start]
@@ -212,6 +269,7 @@ class AcoAgent(NavigationAgent):
                     best_value = v
                     best_key = k
             path.append(best_key)
+        # updating the cache
         self._greedy_path_step = self.step_count
         self._greedy_path = path
         return path
@@ -232,22 +290,53 @@ class AcoAgent(NavigationAgent):
 
 
 class TimeAwareAnt(AcoAgent):
-    def __init__(self, **kwargs):
+    def __init__(self, time_frame: int = 50, **kwargs):
         AcoAgent.__init__(self, **kwargs)
+        self.time_frame = time_frame
+        self.colony.time_pheromone = np.ones((time_frame, self.colony.pheromones[0], self.colony.pheromones[1]))
 
-    #TODO implement methods and time extended pheromones
+    def time_transition_values(self):
+        return 0.0
+
+    def time_transition_probabilities(self):
+        return {}
+
+    def _put_pheromones_to_nodes(self, path, amount):
+        AcoAgent._put_pheromones_to_nodes(self, path, amount)
+        delta = amount / len(path)
+        for i, to in enumerate(path[1:]):
+            self.colony.time_pheromone[i, path[i], to] += delta
+
+    def vaporize(self, evaporation_method="normalize", evaporation_rate=0.99, **kwargs):
+        AcoAgent.vaporize(self, evaporation_method=evaporation_method, evaporation_rate=evaporation_rate, **kwargs)
+        if evaporation_method == "normalize":
+            for t in range(self.time_frame):
+                self.colony.time_pheromone[t] = normalize_matrix(self.colony.time_pheromone[t])
+
+
+
+    def decision(self, **kwargs) -> int:
+        if not self.forward:
+            return AcoAgent.decision(self, **kwargs)
+        new = self.transition_options(exclude_path=False, **kwargs)
+        self.time_transition_probabilities()
+
+
+
+
+
 
 
 if __name__ == '__main__':
-    world = TestProblem().hard_2()
+    world = TestProblem().hard_1()
     colony1 = Colony()
     colony2 = Colony()
-    agents = [AcoAgent(colony=colony1, start=world.agents[0].start, goal=world.agents[0].goal, elitism_amount=0.1, evaporation_method="default_aco") for _ in range(2)]
-    agents += [AcoAgent(colony=colony2, start=10, goal=20) for _ in range(2)]
-    agents += [AcoAgent(colony=colony2, start=20, goal=30) for _ in range(2)]
+    agents = [AcoAgent(colony=colony1, start=world.agents[0].start, goal=world.agents[0].goal, dissipation_rate=0.001, elitism_amount=0.001, evaporation_method="normalize") for _ in range(2)]
+    #agents += [AcoAgent(colony=colony2, start=10, goal=20) for _ in range(2)]
+    #agents += [AcoAgent(colony=colony2, start=20, goal=30) for _ in range(2)]
     world.update_agents(agents)
     for _ in range(1000):
-        world.step(c_t = 0.1, c_d = 0.1)
+        world.step(c_t = 0.1, c_d = 0.1, alpha = 1.0, beta=1.0, eps=0.01)
     #print(f"{colony.pheromones}")
     print(world.get_data())
     world.dot_graph(colony1.pheromones , render=True)

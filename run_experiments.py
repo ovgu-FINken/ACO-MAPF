@@ -44,6 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--median", help="use median as averaging method in evaluation", action="store_const", const="median", dest="average")
     parser.add_argument("--property", help="property to use in the evaluation i.e. min_best_distance")
     parser.add_argument("--analyze", help='file of parameters to analyze', type=str)
+    parser.add_argument("--dry", help="only execute the first two tasks, no to see if there are errors", action="store_true", default=False)
     args = parser.parse_args()
     if args.optimize:
         optimize(args)
