@@ -32,7 +32,7 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
     return df.replace(np.inf, np.nan)
 
 
-def eval_df(data, step=None, avg="mean", property="min_best_distance", verbose=False, **kwargs):
+def eval_df(data, step=None, avg="mean|median", property="min_best_distance", verbose=False, **kwargs):
     if(len(kwargs) > 0):
         print(f"eval got unrecognized kwargs:\n{kwargs}")
     df = data
@@ -44,7 +44,12 @@ def eval_df(data, step=None, avg="mean", property="min_best_distance", verbose=F
     fitness = np.nan
     if avg == "median":
         fitness = df[property].median()
-    fitness = df[property].mean()
+    elif avg == "mean":
+        fitness = df[property].mean()
+    else:
+        print(f"avg {avg} not reconized or not specified, using median")
+        fitness = df[property].median()
+
     if verbose:
         print(f"fitness: {fitness}")
     return fitness
