@@ -218,22 +218,28 @@ class AcoAgent(NavigationAgent):
         self.path = [self.state]
         self.stuck = False
 
+    def check_best_path(self, path):
+        if self.world.path_distance(path) < self.world.path_distance(self.colony.best_path):
+            self.colony.best_path = path
+        if self.world.path_distance(path) < self.world.path_distance(self.best_path):
+            self.best_path = path
+        if self.world.path_distance(path) < self.world.path_distance(self.world.best_path):
+            self.world.best_path = path
+
+
     def daemon_actions(self, **kwargs):
         if self.arrived:
             self.arrived_counter += 1
             path = self.path
             if not self.forward:
                 path.reverse()
-            if self.world.path_distance(path) < self.world.path_distance(self.colony.best_path):
-                self.colony.best_path = path
-            if self.world.path_distance(path) < self.world.path_distance(self.best_path):
-                self.best_path = path
-            if self.world.path_distance(path) < self.world.path_distance(self.world.best_path):
-                self.world.best_path = path
+            self.check_best_path(path)
         if self.arrived or self.stuck:
             if self.stuck:
                 self.stuck_counter += 1
             self.reset(**kwargs)
+        if self.greedy_path_dist < self.world.path_distance(self.best_path):
+            self.check_best_path(self.greedy_path)
 
     def step(self, **kwargs):
         self.step_count += 1
@@ -277,6 +283,7 @@ class AcoAgent(NavigationAgent):
     @property
     def greedy_path_dist(self):
         p = self.greedy_path
+        #print(f"{p}, {self.goal}")
         if p[-1] == self.goal:
             return self.world.path_distance(p)
         return np.nan

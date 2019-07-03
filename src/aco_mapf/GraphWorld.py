@@ -109,7 +109,8 @@ class GraphWorld:
                   eps: float = 0.01,
                   render=False,
                   normalize_pheromone=True,
-                  show_decision=True
+                  show_decision=True,
+                  show_greedy_path=False
                   ):
         dot = graphviz.Digraph(comment="representation of current world state", engine="neato")
         dot.attr(overlap="scale")
@@ -169,6 +170,10 @@ class GraphWorld:
                     value = agent.transition_value(agent.state, node, **agent.kwargs) / value_sum
                     dot.edge(agent.graph_str, f"{node}", color="orange", fontcolor="orange", label=f"{value:.2f}")
 
+        if show_greedy_path:
+            for agent in self.agents:
+                for i, node in enumerate(agent.greedy_path):
+                    dot.edge(agent.graph_str, f"{node}", color="yellow", label=f"{i}", fontcolor="yellow")
 
         if render:
             dot.render(tempfile.mktemp('.gv'), view=True)
@@ -301,7 +306,13 @@ if __name__ == "__main__":
     from src.aco_mapf.AcoAgent import *
     a = AcoAgent()
     prolem = TestProblem(seed=1).hard_3(agents=[a])
-    prolem.dot_graph(render=True)
+    for _ in range(1000):
+        prolem.step()
+        x = a.greedy_path_dist
+        print(x)
+    prolem.dot_graph(pheromones=a.colony.pheromones, render=True, show_greedy_path=True)
+    print(f"{a.greedy_path}, length: {a.greedy_path_dist}")
+    print(prolem.get_data()["greedy_distance"])
     """
     import cProfile
 
