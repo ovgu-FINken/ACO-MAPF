@@ -36,6 +36,8 @@ def eval_df(data, step=None, avg="mean|median", property="min_best_distance", ve
     if(len(kwargs) > 0):
         print(f"eval got unrecognized kwargs:\n{kwargs}")
     df = data
+    df['ratio'] = df["arrived"] / (df["stuck"] + df["arrived"])
+    df['efficiency'] = df["median_best_distance"] / df["median_best_time"]
     if step is not None:
         if step > 0:
             df = df.loc[df.world_step_count == step]
