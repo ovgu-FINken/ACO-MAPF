@@ -80,7 +80,13 @@ def run_optimization(filename, generations=20, runs=31, outfile=None, data_file=
         for _ in range(generations):
             print(f"{optimizer.generation} optimizer.best: {optimizer.global_best_fitness}\n{optimizer.global_best}")
             print("\n".join([f"{p.name} -- {p.best} from [{p.low}, {p.high}]" for p in optimizer.mapping]))
-            print(optimizer.population)
+
+            for i in range(optimizer.population.shape[0]):
+                s = ""
+                for v in optimizer.population[i]:
+                    s += f"{v:.3f}"
+                s += "\n"
+                print(s)
             optimizer.run_generation()
             print(optimizer.fitness)
             print("\n\n")
