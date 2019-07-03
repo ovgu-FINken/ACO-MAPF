@@ -25,7 +25,7 @@ def run_testprolem_aco(seed=0, num_agents=1, log_steps=20, between_log_steps=50,
         problem = TestProblem(seed=1).easy_4(agents=agents)
     elif problem.split("_")[0] == "grid":
         _, n, m = problem.split("_")
-        problem = TestProblem(seed=1).grid_graph(int(n), int(m))
+        problem = TestProblem(seed=1).grid_graph(int(n), int(m),agents=agents)
     else:
         print(f"problem '{problem}' not known")
     data = []
