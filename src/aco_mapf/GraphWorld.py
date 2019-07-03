@@ -243,6 +243,17 @@ class TestProblem:
                 agent.state = start
         return GraphWorld(adjacency=nx.adj_matrix(G).todense(), agents=agents)
 
+    def grid_graph(self, n, m, start=0, goal=None, periodic=False, random_weights=True, **kwargs):
+        if goal is None:
+            goal = n * m - 1
+        G = nx.grid_graph([n, m], periodic=periodic)
+        if random_weights:
+            for e in G.edges():
+                G[e[0]][e[1]]['weight'] = (10 * self.random.rand())**2
+
+        return self.graph_prolem(G, start=start, goal=goal, **kwargs)
+
+
     def watts_strogatz_problem(self, nodes, k, p, seed=42, start=0, goal=1, **kwargs):
         G = nx.watts_strogatz_graph(nodes, k, p, seed=seed)
         for e in G.edges():
@@ -305,12 +316,12 @@ class TestProblem:
 if __name__ == "__main__":
     from src.aco_mapf.AcoAgent import *
     a = AcoAgent()
-    prolem = TestProblem(seed=1).hard_3(agents=[a])
-    for _ in range(1000):
+    prolem = TestProblem(seed=1).grid_graph(10, 10, agents=[a])
+    for _ in range(10000):
         prolem.step()
         x = a.greedy_path_dist
-        print(x)
-    prolem.dot_graph(pheromones=a.colony.pheromones, render=True, show_greedy_path=True)
+        #print(x)
+    prolem.dot_graph(pheromones=a.colony.pheromones, render=True)#, show_greedy_path=True)
     print(f"{a.greedy_path}, length: {a.greedy_path_dist}")
     print(prolem.get_data()["greedy_distance"])
     """
