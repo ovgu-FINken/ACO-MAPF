@@ -14,6 +14,8 @@ def optimize(args):
         outfile = args.params_out
     if args.average:
         eval_kwargs["avg"] = args.average
+    else:
+        eval_kwargs["avg"] = "mean"
     if args.property:
         eval_kwargs["property"] = args.property
     if args.step:
