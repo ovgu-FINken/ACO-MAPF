@@ -320,16 +320,11 @@ class TimeAwareAnt(AcoAgent):
             for t in range(self.time_frame):
                 self.colony.time_pheromone[t] = normalize_matrix(self.colony.time_pheromone[t])
 
-
-
     def decision(self, **kwargs) -> int:
         if not self.forward:
             return AcoAgent.decision(self, **kwargs)
         new = self.transition_options(exclude_path=False, **kwargs)
         self.time_transition_probabilities()
-
-
-
 
 
 
