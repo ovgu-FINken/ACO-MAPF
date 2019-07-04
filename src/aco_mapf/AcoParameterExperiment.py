@@ -86,7 +86,6 @@ def run_optimization(filename, generations=20, runs=31, outfile=None, data_file=
                 s = ""
                 for v in optimizer.population[i]:
                     s += f"  {v:.3f}"
-                s += "\n"
                 print(s)
             print(optimizer.fitness)
             print("\n\n")
