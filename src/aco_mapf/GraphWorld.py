@@ -112,23 +112,29 @@ class GraphWorld:
                   show_decision=True,
                   show_greedy_path=False
                   ):
+        p_no_diag = pheromones.copy()
+        for u in range(pheromones.shape[0]):
+            p_no_diag[u,u] = 0
+        norm = np.max(p_no_diag) if normalize_pheromone else 1
         dot = graphviz.Digraph(comment="representation of current world state", engine="neato")
         dot.attr(overlap="scale")
         dot.attr(K="1")
         dot.attr(maxiter="20000")
         dot.attr(start="42")
         for i in range(self.adjacency.shape[0]):
-            dot.node(f"{i}", f"{i}")
+            if pheromones[i,i] / norm < eps:
+                dot.node(f"{i}", f"{i}")
+            else:
+                dot.node(f"{i}", f"{i}:{pheromones[i,i]/norm:.2f}")
         for (i, j), v in np.ndenumerate(self.adjacency):
             if v > 0:
                 label = f"{v}"
                 color="black"
                 if pheromones is not None:
-                    color = f"gray{int(90 - 90 * pheromones[i,j] / np.max(pheromones))}"
+                    color = f"gray{int(90 - 90 * pheromones[i,j] / norm)}"
                     if pheromones[i, j] <= eps * np.max(pheromones):
                         label = ""
                     else:
-                        norm = np.max(pheromones) if normalize_pheromone else 1
                         label = f"{pheromones[i,j] / norm:.2f}"
                 dot.edge(f"{i}", f"{j}", label=label, color=color)
 
@@ -252,7 +258,6 @@ class TestProblem:
                 G[e[0]][e[1]]['weight'] = (10 * self.random.rand())**2
 
         return self.graph_prolem(G, start=start, goal=goal, **kwargs)
-
 
     def watts_strogatz_problem(self, nodes, k, p, seed=42, start=0, goal=1, **kwargs):
         G = nx.watts_strogatz_graph(nodes, k, p, seed=seed)
